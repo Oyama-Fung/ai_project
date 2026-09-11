@@ -50,6 +50,8 @@ import {
     isMarkdownMime,
     isPdfMime,
 } from '@/utils/documentFile'
+import remarkGfm from 'remark-gfm'
+import { gfmComponents } from '@/components/markdownComponents'
 
 const { Title, Text, Paragraph } = Typography
 
@@ -202,7 +204,7 @@ export function DocumentDetailPage() {
             {doc.status === 'failed' && doc.error_message ? (
                 <Alert
                     type="error"
-                    message="入库失败"
+                    title="入库失败"
                     description={doc.error_message}
                     showIcon
                     style={{ marginBottom: 16 }}
@@ -273,7 +275,7 @@ function PreviewArea({ mimeType, previewUrl }: { mimeType: string; previewUrl: s
         <Alert
             type="info"
             showIcon
-            message="该格式不支持内联预览"
+            title="该格式不支持内联预览"
             description="DOCX 等富文本格式请下载后用本地编辑器查看。"
         />
     )
@@ -309,11 +311,13 @@ function MarkdownPreview({ url }: { url: string }) {
         }
     }, [url])
 
-    if (error) return <Alert type="error" message="加载 Markdown 失败" description={error} />
+    if (error) return <Alert type="error" title="加载 Markdown 失败" description={error} />
     if (content === null) return <Skeleton active />
     return (
         <div style={{ padding: 16, maxHeight: 600, overflow: 'auto' }}>
-            <ReactMarkdown>{content}</ReactMarkdown>
+            <ReactMarkdown remarkPlugins={[remarkGfm]} components={gfmComponents}>
+                {content}
+            </ReactMarkdown>
         </div>
     )
 }

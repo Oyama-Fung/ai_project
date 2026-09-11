@@ -43,6 +43,7 @@ async def ingest_document(document_id: UUID) -> None:
 
         await _set_status(document_id, DocumentStatus.INDEXING)
         chunks = splitter.split(documents)
+        logger.info("切分好的chunks：%s", chunks)
         if not chunks:
             raise ValueError("切分后没有任何chunks，请检查文档内容")
 

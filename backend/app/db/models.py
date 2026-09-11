@@ -28,6 +28,8 @@ class DocumentStatus(StrEnum):
 
 
 class Document(Base):
+    """文档表，存储文档的元信息，文件存储在COS中，切分后的chunk存储在document_chunks表中"""
+
     __tablename__ = "documents"
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
@@ -56,6 +58,8 @@ class Document(Base):
 
 
 class DocumentChunk(Base):
+    """chunk表，存储文档切分后的内容和向量化结果，向量化结果用于检索"""
+
     __tablename__ = "document_chunks"
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
@@ -74,3 +78,92 @@ class DocumentChunk(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     document: Mapped[Document] = relationship(back_populates="chunks")
+
+
+class MessageRole(StrEnum):
+    """消息角色"""
+
+    SYSTEM = "system"
+    USER = "user"
+    ASSISTANT = "assistant"
+
+
+class Conversation(Base):
+    """会话表，存储用户的会话信息"""
+
+    __tablename__ = "conversations"
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    title: Mapped[str] = mapped_column(String(256), nullable=False, default="新对话")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+    messages: Mapped[list["Message"]] = relationship(
+        back_populates="conversation",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        order_by="Message.created_at",
+    )
+
+
+class Message(Base):
+    """消息表，存储会话中的消息"""
+
+    __tablename__ = "messages"
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    conversation_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("conversations.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    role: Mapped[MessageRole] = mapped_column(String(16), nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    extra_metadata: Mapped[dict] = mapped_column("metadata", JSONB, nullable=False, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    conversation: Mapped[Conversation] = relationship(back_populates="messages")
+    citations: Mapped[list["AnswerCitation"]] = relationship(
+        back_populates="message",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        order_by="AnswerCitation.ordinal",
+    )
+
+
+class AnswerCitation(Base):
+    """
+    消息引用表，存储消息中引用的文档chunk信息。
+    冗余 page_no / quote 的作用：原 chunk 被删除或者覆盖
+    """
+
+    __tablename__ = "answer_citations"
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    message_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("messages.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    # promt 中给 llm 看到的 片段N 编号，从1开始
+    # 持久化下来才能保证刷新后引用顺序与 llm 当时看到的一致（id是随机的不能用来排序）
+    ordinal: Mapped[int] = mapped_column(Integer, nullable=False)
+    # 原文档/chunk可能被删除，所以 ON DELETE SET NULL, 保留快照
+    document_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("documents.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    chunk_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("document_chunks.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    document_name: Mapped[str] = mapped_column(String(512), nullable=False)
+    page_no: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    quote: Mapped[str] = mapped_column(Text, nullable=False)
+
+    message: Mapped[Message] = relationship(back_populates="citations")

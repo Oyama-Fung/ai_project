@@ -34,12 +34,13 @@ backend = "app.main:app"
 requires = ["uv_build>=0.12.3,<0.13.0"]
 build-backend = "uv_build"
 
-[tool.uv-build]
-packages = ["app"]
+[tool.uv.build-backend]
+module-name = "app"
+module-root = ""
 
 [dependency-groups]
 dev = [
-    "ruff>=0.17.0",
+    "ruff>=0.16.0",
 ]
 
 [tool.ruff]

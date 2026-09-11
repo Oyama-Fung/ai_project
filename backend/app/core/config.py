@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     cos_region: str = "ap-beijing"
     # 跨域配置
     cors_origins: str = "http://localhost:5173"
-    # Embedding
+    # Embedding 模型配置
     embedding_api_key: str = ""
     embedding_base_url: str = ""
     embedding_model: str = ""
@@ -33,6 +33,18 @@ class Settings(BaseSettings):
     upload_max_size_mb: int = 50
     chunk_size: int = 600
     chunk_overlap: int = 60
+    # chat 模型配置
+    chat_api_key: str = ""
+    chat_base_url: str = ""
+    chat_model: str = "qwen3.8-flash"
+
+    # =======检索与问答=======
+    # 检索 top-k: 交给 LLM 的候选 chunk 数量
+    retrieval_top_k: int = 5
+    # 拒答阈值: 当检索到的 chunk 与问题的相似度低于该阈值时，拒绝回答
+    retrieval_min_score: float = 0.6
+    # 多轮窗口：load_context 节点取最近多少轮塞进 promt
+    chat_history_window: int = 5
 
     @property
     def cos_configured(self) -> bool:

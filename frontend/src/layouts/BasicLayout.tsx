@@ -7,7 +7,7 @@ const { Header, Sider, Content } = Layout
 const menuItems = [
     { key: '/', icon: <DashboardOutlined />, label: <Link to="/">首页</Link> },
     { key: '/documents', icon: <FileTextOutlined />, label: <Link to="/documents">文档管理</Link> },
-    { key: '/chat', icon: <MessageOutlined />, label: "知识问答", disabled: true },
+    { key: '/chat', icon: <MessageOutlined />, label: <Link to="/chat">知识问答</Link> },
 ]
 
 function resolveSelectedKey(pathname: string): string {
