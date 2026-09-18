@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     app_name: str = "rag-knowledge-base"
     log_level: str = "INFO"
     # 数据库配置
-    database_url: str = "postgresql+asyncpg://rag:rag@localhost:5432/rag_kb"
+    database_url: str = "postgresql+asyncpg://rag:rag@localhost:5433/rag_kb"
     # 腾讯云COS配置
     cos_secret_id: str = ""
     cos_secret_key: str = ""
@@ -45,6 +45,19 @@ class Settings(BaseSettings):
     retrieval_min_score: float = 0.6
     # 多轮窗口：load_context 节点取最近多少轮塞进 promt
     chat_history_window: int = 5
+
+    # ===== Query 优化（第 5 章）=====
+    # 关掉后 route_query 节点强制走 original，方便对比有/无路由的效果
+    query_route_enabled: bool = True
+    # Multi-Query 策略生成的子查询数量，过大会增加 embedding 成本
+    multi_query_count: int = 3
+
+    # ===== 混合检索 =====
+    # 每路（向量 / 关键词）召回数量；设计文档建议候选 20-50
+    # 取 20 兼顾召回率与 RRF 融合开销
+    retrieval_recall_top_k: int = 20
+    # RRF 平滑常数，业界默认 60；越小越偏向高排名条目
+    rrf_k: int = 60
 
     @property
     def cos_configured(self) -> bool:

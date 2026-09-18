@@ -2,7 +2,7 @@ from collections.abc import AsyncIterator
 
 from app.llm.models import get_chat_model
 from app.llm.prompts import build_answer_messages
-from app.workflow.rag_state import RAGState
+from app.workflows.rag_state import RAGState
 
 
 async def stream_generate(state: RAGState) -> AsyncIterator[str]:

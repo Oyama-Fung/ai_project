@@ -2,7 +2,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.db.repositories.conversation_repo import ConversationRepository
-from app.workflow.rag_state import RAGState
+from app.workflows.rag_state import RAGState
 
 
 async def load_context(state: RAGState, session: AsyncSession) -> RAGState:

@@ -10,14 +10,20 @@ from app.db.repositories.citation_repo import AnswerCitationRepository
 from app.db.repositories.conversation_repo import ConversationRepository
 from app.db.session import AsyncSessionLocal
 from app.retrieval.vector_retriever import RetrievedChunk
-from app.workflow.nodes import load_context, normalize_query, retrieve, stream_generate
-from app.workflow.rag_state import RAGState
+from app.workflows.nodes import (
+    load_context,
+    normalize_query,
+    retrieve,
+    route_query,
+    stream_generate,
+)
+from app.workflows.rag_state import RAGState
 
 logger = get_logger(__name__)
 
 
 def _serialize_citation(chunk: RetrievedChunk, ordinal: int) -> dict:
-    """citation SSE 事件载荷格式（与前端约定一致）
+    """citation SSE 事件载荷格式,与 CitationRead 对齐
     ordinal 必须显式传入：与 prompt 中给 LLM 看到的 片段N 编号一致
     前端按这个数字渲染 [N] 角标，避免后续顺序丢失导致引用串号
     """
@@ -30,6 +36,33 @@ def _serialize_citation(chunk: RetrievedChunk, ordinal: int) -> dict:
         "section_path": chunk.section_path,
         "score": round(chunk.score, 4),
         "quote": chunk.content,
+        "retrieval_meta": _build_retrieval_meta(chunk),
+    }
+
+
+def _build_query_route_payload(state: RAGState) -> dict:
+    """
+    SSE / metadata 共用的 query_route 载荷格式。
+    始终携带4个可选字段，前端可据此判断展示哪种调试面板。
+    """
+    return {
+        "route": state.get("route", "original"),
+        "query": state.get("query", ""),
+        "rewritten_query": state.get("rewritten_query"),
+        "hyde_answer": state.get("hyde_answer"),
+        "multi_queries": state.get("multi_queries"),
+    }
+
+
+def _build_retrieval_meta(chunk: RetrievedChunk) -> dict:
+    """混合检索调试元数据"""
+    return {
+        "sources": list(chunk.sources),
+        "vector_rank": chunk.vector_rank,
+        "vector_score": (round(chunk.vector_score, 4) if chunk.vector_score is not None else None),
+        "keyword_rank": chunk.keyword_rank,
+        "keyword_score": (round(chunk.keyword_score, 4) if chunk.keyword_score is not None else None),
+        "rrf_score": (round(chunk.rrf_score, 6) if chunk.rrf_score is not None else None),
     }
 
 
@@ -86,6 +119,7 @@ class ChatService:
                 # 1. 加载上下文（仅历史消息，本轮 user 此刻尚未入库）+ 改写查询
                 state.update(await load_context(state, session))
                 state.update(await normalize_query(state))
+                state.update(await route_query(state))
 
                 # 2. user 消息落库
                 await self._persist_user_message(state, session)
@@ -95,8 +129,14 @@ class ChatService:
                     "data": {"user_message_id": str(state["user_message_id"])},
                 }
 
-                # 3. retrieve (含拒答判定) - 先把引用发给前端，让参考资料面板立刻可见
-                state.update(await retrieve(state, session))
+                # 3-1. 把 query 路由结果推给前端调试面板（始终发送，前端按route选择渲染）
+                yield {
+                    "event": "query_route",
+                    "data": _build_query_route_payload(state),
+                }
+
+                # 3-2. retrieve (含拒答判定) - 先把引用发给前端，让参考资料面板立刻可见
+                state.update(await retrieve(state))
 
                 citation_payload = [
                     _serialize_citation(c, ordinal=i) for i, c in enumerate(state.get("retrieved_chunks", []), start=1)
@@ -154,7 +194,13 @@ class ChatService:
         citation_repo = AnswerCitationRepository(session)
 
         assistant_msg = ConversationRepository.make_assistant_message(
-            state["conversation_id"], content=state["answer"], extra_metadata={"refused": bool(state.get("refused"))}
+            state["conversation_id"],
+            content=state["answer"],
+            extra_metadata={
+                "refused": bool(state.get("refused")),
+                # 把query路由结果持久化到metadata字段，刷新历史时前端调试面板还能继续展示
+                "query_route": _build_query_route_payload(state),
+            },
         )
         await conv_repo.add_message([assistant_msg])
 
@@ -168,6 +214,7 @@ class ChatService:
                     document_name=chunk.document_name,
                     page_no=chunk.page_no,
                     quote=chunk.content,
+                    retrieval_meta=_build_retrieval_meta(chunk),
                 )
                 for ordinal, chunk in enumerate(state.get("retrieved_chunks", []), start=1)
             ]

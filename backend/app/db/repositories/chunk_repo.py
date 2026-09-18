@@ -104,3 +104,32 @@ class DocumentChunkRepository:
         )
         rows = (await self.session.execute(stmt)).all()
         return [(chunk, float(dist)) for chunk, dist in rows]
+
+    async def keyword_search(
+        self,
+        query: str,
+        top_k: int,
+        *,
+        permission_tags: list[str] | None = None,
+    ) -> list[tuple[DocumentChunk, float]]:
+        """中文全文检索 Top-K：plainto_tsquery + ts_rank。
+
+        - 用 chinese_zh 文本搜索配置（zhparser 切词，迁移里建好）
+        - plainto_tsquery：自动把多个词 AND 起来，对用户输入容错最好
+          （"差旅 报销"和"差旅报销"都会切成同一组 token）
+        - 仅命中 status='ready' 文档，避免拿到尚未完成入库的脏 chunk
+        - permission_tags：用户有效权限标签；None / 含 "*" 不限；其他按数组重叠 + 空标签公开
+        """
+        tsquery = func.plainto_tsquery("chinese_zh", query)
+        rank_expr = func.ts_rank(DocumentChunk.content_tsv, tsquery)
+
+        stmt = (
+            select(DocumentChunk, rank_expr.label("rank"))
+            .join(Document, Document.id == DocumentChunk.document_id)
+            .where(Document.status == "ready", DocumentChunk.content_tsv.op("@@")(tsquery))
+            .order_by(rank_expr.desc())
+            .limit(top_k)
+            .options(selectinload(DocumentChunk.document))
+        )
+        rows = (await self.session.execute(stmt)).all()
+        return [(chunk, float(rank)) for chunk, rank in rows]
