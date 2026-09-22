@@ -18,8 +18,12 @@ import { createConversation, getConversation } from '@/client/sdk.gen'
 import type {
     CitationRead,
     MessageRead,
+    AgentStep,
+    QueryRouteRead,
 } from '@/client/types.gen'
 import { streamChat, type ChatStreamEvent } from '@/api/chatStream'
+import { AgentStepsPanel } from '@/components/AgentStepsPanel'
+import { QueryRoutePanel } from '@/components/QueryRoutePanel'
 import { gfmComponents } from '@/components/markdownComponents'
 import { CitationList, type CitationListHandle } from '@/components/CitationList'
 import { formatApiError } from '@/utils/errors'
@@ -37,6 +41,8 @@ interface UiMessage {
     role: 'user' | 'assistant'
     content: string
     citations: CitationRead[]
+    queryRoute?: QueryRouteRead | null
+    agentSteps?: AgentStep[] | null
     status?: AssistantStatus
     error?: string | null
 }
@@ -47,6 +53,8 @@ function fromServerMessage(m: MessageRead): UiMessage {
         role: m.role === 'assistant' ? 'assistant' : 'user',
         content: m.content,
         citations: m.citations ?? [],
+        queryRoute: m.query_route ?? null,
+        agentSteps: m.agent_steps ?? null,
         status: 'done',
     }
 }
@@ -170,6 +178,12 @@ export function ChatPage() {
                 onEvent: (event: ChatStreamEvent) => {
                     switch (event.type) {
                         case 'start':
+                            break
+                        case 'query_route':
+                            updateAssistant((prev) => ({ ...prev, queryRoute: event.queryRoute }))
+                            break
+                        case 'agent_steps':
+                            updateAssistant((prev) => ({ ...prev, agentSteps: event.steps }))
                             break
                         case 'citations':
                             updateAssistant((prev) => ({ ...prev, citations: event.citations }))
@@ -368,6 +382,12 @@ function MessageBubble({ message }: MessageBubbleProps) {
                     <Text type="secondary">
                         <Spin size="small" /> 正在思考...
                     </Text>
+                ) : null}
+                {!isUser && message.queryRoute ? (
+                    <QueryRoutePanel queryRoute={message.queryRoute} />
+                ) : null}
+                {!isUser && message.agentSteps && message.agentSteps.length > 0 ? (
+                    <AgentStepsPanel steps={message.agentSteps} />
                 ) : null}
                 {!isUser && message.citations.length > 0 ? (
                     <CitationList ref={citationRef} citations={message.citations} messageId={message.id} />

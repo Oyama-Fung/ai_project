@@ -10,13 +10,8 @@ from app.db.repositories.citation_repo import AnswerCitationRepository
 from app.db.repositories.conversation_repo import ConversationRepository
 from app.db.session import AsyncSessionLocal
 from app.retrieval.vector_retriever import RetrievedChunk
-from app.workflows.nodes import (
-    load_context,
-    normalize_query,
-    retrieve,
-    route_query,
-    stream_generate,
-)
+from app.workflows.graph import get_rag_graph
+from app.workflows.nodes import load_context, stream_generate
 from app.workflows.rag_state import RAGState
 
 logger = get_logger(__name__)
@@ -64,6 +59,15 @@ def _build_retrieval_meta(chunk: RetrievedChunk) -> dict:
         "keyword_score": (round(chunk.keyword_score, 4) if chunk.keyword_score is not None else None),
         "rrf_score": (round(chunk.rrf_score, 6) if chunk.rrf_score is not None else None),
     }
+
+
+def _serialize_agent_steps(state: RAGState) -> list[dict]:
+    """SSE / metadata 共用的 agent_steps 载荷格式。
+
+    state 内字段全部用原生 Python 类型，直接 JSON 序列化即可；这里做一层显式拷贝
+    避免后续节点继续追加时影响已发出的事件 / 已持久化的 metadata。
+    """
+    return [dict(step) for step in state.get("agent_steps", [])]
 
 
 class ChatService:
@@ -116,12 +120,15 @@ class ChatService:
                     "question": question,
                 }
 
-                # 1. 加载上下文（仅历史消息，本轮 user 此刻尚未入库）+ 改写查询
+                # 1. 加载上下文（仅历史消息，本轮 user 此刻尚未入库）
+                # load_context 是唯一需要 DB session 的节点，由 service 先填好再交给图
                 state.update(await load_context(state, session))
-                state.update(await normalize_query(state))
-                state.update(await route_query(state))
 
-                # 2. user 消息落库
+                # 2. 跑 RAG 子图：normalize_query -> route_query -> 检索决策循环
+                final_state = await get_rag_graph().ainvoke(state)
+                state.update(final_state)
+
+                # 3. user 消息落库
                 await self._persist_user_message(state, session)
 
                 yield {
@@ -129,21 +136,30 @@ class ChatService:
                     "data": {"user_message_id": str(state["user_message_id"])},
                 }
 
-                # 3-1. 把 query 路由结果推给前端调试面板（始终发送，前端按route选择渲染）
+                # 4. 把 query 路由结果推给前端调试面板（始终发送，前端按route选择渲染）
                 yield {
                     "event": "query_route",
                     "data": _build_query_route_payload(state),
                 }
+                yield {
+                    "event": "agent_steps",
+                    "data": {"steps": _serialize_agent_steps(state)},
+                }
 
-                # 3-2. retrieve (含拒答判定) - 先把引用发给前端，让参考资料面板立刻可见
-                state.update(await retrieve(state))
+                # 拒答路径下不下发 citations，retrieved_chunks 可能还残留 agent 循环
+                # 中途某一轮的候选（被 observe_context 判为不足），但语义上既然已经拒答，
+                # 前端就不该再展示这些参考资料
+                citations_payload = (
+                    []
+                    if state.get("refused")
+                    else [
+                        _serialize_citation(c, ordinal=i)
+                        for i, c in enumerate(state.get("retrieved_chunks", []), start=1)
+                    ]
+                )
+                yield {"event": "citations", "data": {"citations": citations_payload}}
 
-                citation_payload = [
-                    _serialize_citation(c, ordinal=i) for i, c in enumerate(state.get("retrieved_chunks", []), start=1)
-                ]
-                yield {"event": "citations", "data": {"citations": citation_payload}}
-
-                # 4. 生成：拒答直接走拒答文案，否则逐token流式
+                # 6. 生成：拒答直接走拒答文案，否则逐token流式
                 if state.get("refused"):
                     yield {
                         "event": "token",
@@ -156,7 +172,7 @@ class ChatService:
                         yield {"event": "token", "data": {"delta": delta}}
                     state["answer"] = "".join(answer_parts)
 
-                # 5. assistant 消息 + citations 同事务落库（保证两者原子）
+                # 7. assistant 消息 + citations 同事务落库（保证两者原子）
                 await self._persist_assistant_message(state, session)
 
                 yield {
@@ -200,6 +216,7 @@ class ChatService:
                 "refused": bool(state.get("refused")),
                 # 把query路由结果持久化到metadata字段，刷新历史时前端调试面板还能继续展示
                 "query_route": _build_query_route_payload(state),
+                "agent_steps": _serialize_agent_steps(state),
             },
         )
         await conv_repo.add_message([assistant_msg])
