@@ -65,6 +65,45 @@ class Settings(BaseSettings):
     # 最大检索轮次（含首轮）。LLM 决策最多触发 max_rounds-1 次再检索，避免循环调用
     agent_max_rounds: int = 3
 
+    # ===== Reranker（DashScope qwen3-rerank，第 8 章）=====
+    # 关掉后 rerank 节点直接透传，作为有/无精排的对比开关
+    rerank_enabled: bool = True
+    # DashScope rerank 端点，不是标准 OpenAI API
+    rerank_base_url: str = ""
+    rerank_model: str = "qwen3.7-text-rerank"
+    # 留空时复用 chat_api_key（同一份 DashScope key，避免重复配置）
+    rerank_api_key: str = ""
+    # rerank Top1 相关度阈值；低于此值视为"上下文不足"由 judge_context 触发拒答
+    # qwen3-rerank 输出 relevance_score ∈ [0, 1]，0.3 是经验值
+    rerank_min_score: float = 0.3
+    # 请求超时（秒），rerank 是同步调用主链路，超时要短一点避免拖慢回答
+    rerank_timeout: float = 8.0
+
+    # ===== 答案校验（第 8 章）=====
+    # 关掉后跳过 verify_answer 调用，方便对比有/无引用支撑校验的效果
+    verify_answer_enabled: bool = True
+
+    # ===== LangSmith 可观测性 =====
+    # 关掉后 @traceable / LangChain 自动 trace 全部降级为 no-op，trace_id 返回 None
+    # 未配置 LangSmith key 时默认关闭，不影响本地启动
+    langsmith_tracing: bool = False
+    langsmith_api_key: str = ""
+    langsmith_project: str = "rag-knowledge-base"
+    langsmith_endpoint: str = "https://api.smith.langchain.com"
+    # LangSmith UI 私有 URL 前缀，形如 https://smith.langchain.com/o/{org}/projects/p/{project}
+    # 包含 workspace/org 信息所以是私有的，配置后才下发跳转链接给前端
+    langsmith_run_url_prefix: str = ""
+
+    @property
+    def observability_enabled(self) -> bool:
+        """LangSmith 实际生效条件：开关打开 + key 已配置。任一缺失都视为关闭。"""
+        return bool(self.langsmith_tracing and self.langsmith_api_key)
+
+    @property
+    def effective_rerank_api_key(self) -> str:
+        """rerank_api_key 留空时回落到 chat_api_key，二者本来就是同一份 DashScope key。"""
+        return self.rerank_api_key or self.chat_api_key
+
     @property
     def cos_configured(self) -> bool:
         return bool(self.cos_secret_id and self.cos_secret_key and self.cos_bucket)

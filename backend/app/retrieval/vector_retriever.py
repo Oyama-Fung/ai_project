@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from uuid import UUID
 
+from langsmith import traceable
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.repositories.chunk_repo import DocumentChunkRepository
@@ -35,12 +36,16 @@ class RetrievedChunk:
     keyword_rank: int | None = None
     keyword_score: float | None = None  # 原始 ts_rank（关键词路命中时填充）
     rrf_score: float | None = None
+    # reranker query-chunk 成对打分的相关度，越大越相关
+    # qwen3-rerank 输出 relevance_score ∈ [0, 1]
+    rerank_score: float | None = None
 
 
 class VectorRetriever:
     def __init__(self, session: AsyncSession) -> None:
         self.chunk_repo = DocumentChunkRepository(session)
 
+    @traceable(name="VectorRetriever.search", run_type="retriever")
     async def search(self, query: str, top_k: int) -> list[RetrievedChunk]:
         """向量检索"""
         embedding = get_embeddings().embed_query(query)

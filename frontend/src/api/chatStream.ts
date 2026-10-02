@@ -4,6 +4,10 @@ import type { AgentStep, CitationRead, QueryRouteRead } from '@/client/types.gen
 
 export interface ChatStartEvent {
     type: 'start'
+    /** LangSmith trace_id；未启用观测时为 null */
+    traceId: string | null
+    /** LangSmith UI 跳转 URL；后端按 LANGSMITH_RUN_URL_PREFIX 拼好下发，未配置为 null */
+    traceUrl: string | null
 }
 export interface ChatQueryRouteEvent {
     type: 'query_route'
@@ -20,6 +24,16 @@ export interface ChatCitationsEvent {
 export interface ChatTokenEvent {
     type: 'token'
     delta: string
+}
+export interface ChatVerifyResultEvent {
+    type: 'verify_result'
+    verified: boolean
+    reason: string | null
+    /**
+     * verified=false 时后端给出的替换文本（统一拒答文案）。
+     * 前端按它整段覆盖流式出来的 answer，与 PRD"校验失败 → 拒答替换"对齐。
+     */
+    replacementAnswer: string | null
 }
 export interface ChatEndEvent {
     type: 'end'
@@ -38,6 +52,7 @@ export type ChatStreamEvent =
     | ChatAgentStepsEvent
     | ChatCitationsEvent
     | ChatTokenEvent
+    | ChatVerifyResultEvent
     | ChatEndEvent
     | ChatErrorEvent
 
@@ -79,7 +94,9 @@ export async function streamChat({
                 switch (msg.event) {
                     case 'message_start':
                         onEvent({
-                            type: 'start'
+                            type: 'start',
+                            traceId: data.trace_id ?? null,
+                            traceUrl: data.trace_url ?? null,
                         })
                         break
                     case 'query_route':
@@ -93,6 +110,14 @@ export async function streamChat({
                         break
                     case 'token':
                         onEvent({ type: 'token', delta: data.delta ?? '' })
+                        break
+                    case 'verify_result':
+                        onEvent({
+                            type: 'verify_result',
+                            verified: Boolean(data.verified),
+                            reason: data.reason ?? null,
+                            replacementAnswer: data.replacement_answer ?? null,
+                        })
                         break
                     case 'message_end':
                         onEvent({
