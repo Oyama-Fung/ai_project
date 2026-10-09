@@ -4,6 +4,8 @@ import { createBrowserRouter } from "react-router-dom";
 import { DocumentPage } from "@/pages/DocumentsPage";
 import { DocumentDetailPage } from "@/pages/DocumentDetailPage"
 import { ChatPage } from "@/pages/chatPage";
+import { EvaluationListPage } from "@/pages/EvaluationListPage";
+import { EvaluationDetailPage } from "@/pages/EvaluationDetailPage";
 
 export const router = createBrowserRouter([
     {
@@ -14,6 +16,8 @@ export const router = createBrowserRouter([
             { path: 'documents', element: <DocumentPage /> },
             { path: 'documents/:id', element: <DocumentDetailPage /> },
             { path: 'chat', element: <ChatPage /> },
+            { path: 'evaluation', element: <EvaluationListPage /> },
+            { path: 'evaluation/runs/:id', element: <EvaluationDetailPage /> },
         ]
     }
 ])
