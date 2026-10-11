@@ -46,10 +46,20 @@ class VectorRetriever:
         self.chunk_repo = DocumentChunkRepository(session)
 
     @traceable(name="VectorRetriever.search", run_type="retriever")
-    async def search(self, query: str, top_k: int) -> list[RetrievedChunk]:
+    async def search(
+        self,
+        query: str,
+        top_k: int,
+        *,
+        permission_tags: list[str] | None = None,
+    ) -> list[RetrievedChunk]:
         """向量检索"""
         embedding = get_embeddings().embed_query(query)
-        rows = await self.chunk_repo.vector_search(embedding, top_k)
+        rows = await self.chunk_repo.vector_search(
+            embedding,
+            top_k,
+            permission_tags=permission_tags,
+        )
         return [
             RetrievedChunk(
                 chunk_id=chunk.id,

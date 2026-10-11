@@ -52,6 +52,7 @@ import {
 } from '@/utils/documentFile'
 import remarkGfm from 'remark-gfm'
 import { gfmComponents } from '@/components/markdownComponents'
+import { useAuthStore } from '@/stores/authStore'
 
 const { Title, Text, Paragraph } = Typography
 
@@ -295,7 +296,11 @@ function MarkdownPreview({ url }: { url: string }) {
         let cancelled = false
         setContent(null)
         setError(null)
-        fetch(url)
+        fetch(url, {
+            headers: useAuthStore.getState().token
+                ? { Authorization: `Bearer ${useAuthStore.getState().token!}` }
+                : undefined,
+        })
             .then(async (r) => {
                 if (!r.ok) throw new Error(`${r.status} ${r.statusText}`)
                 return r.text()

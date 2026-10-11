@@ -1,11 +1,36 @@
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.error_handler import register_error_handlers
-from app.api.routes import chat, documents, evaluations, health
+from app.api.routes import auth, chat, documents, evaluations, health, roles, users
 from app.core.config import settings
 from app.core.logging import configure_logging, get_logger
 from app.core.observability import configure_observability
+from app.db.seed import seed_default_admin
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    """应用生命周期钩子：启动时做种子初始化，启动期间维护 MCP session manager。
+
+    `mcp.session_manager.run()` 是 FastMCP streamable HTTP 必须的后台任务组，
+    没有它工具调用会因 ASGI scope 缺失抛 RuntimeError；与 lifespan 绑定保证
+    应用退出时干净收尾。
+    """
+    logger = get_logger(__name__)
+    if not settings.jwt_secret:
+        # 未配置时不阻断启动，仅打 ERROR 提示补配 JWT_SECRET
+        logger.error("JWT_SECRET 未配置，登录功能将不可用。请在 .env 中设置 JWT_SECRET")
+    try:
+        await seed_default_admin()
+    except Exception:
+        logger.exception("种子初始化失败；后续可重新启动重试")
+    yield
+    # async with knowledge_mcp.session_manager.run():
+    #     yield
 
 
 def create_app() -> FastAPI:
@@ -14,7 +39,7 @@ def create_app() -> FastAPI:
     logger = get_logger(__name__)
     logger.info("Starting application...")
 
-    app = FastAPI(title=settings.app_name)
+    app = FastAPI(title=settings.app_name, lifespan=lifespan)
 
     # 注册中间件
     app.add_middleware(
@@ -30,6 +55,9 @@ def create_app() -> FastAPI:
     app.include_router(documents.router, prefix="/api")
     app.include_router(chat.router, prefix="/api")
     app.include_router(evaluations.router, prefix="/api")
+    app.include_router(auth.router, prefix="/api")
+    app.include_router(users.router, prefix="/api")
+    app.include_router(roles.router, prefix="/api")
 
     # 注册错误处理器
     register_error_handlers(app)

@@ -25,9 +25,20 @@ class ConversationRepository:
         await self.session.flush()
         return conversation
 
-    async def get(self, conversation_id: UUID) -> Conversation | None:
-        """根据 ID 获取对话"""
-        return await self.session.get(Conversation, conversation_id)
+    async def get(
+        self,
+        conversation_id: UUID,
+        *,
+        user_id: UUID | None = None,
+    ) -> Conversation | None:
+        """按 id 查会话；user_id 非 None 时强制要求归属（admin 路径不传 user_id 即可不限）。"""
+        if user_id is None:
+            return await self.session.get(Conversation, conversation_id)
+        stmt = select(Conversation).where(
+            Conversation.id == conversation_id,
+            Conversation.user_id == user_id,
+        )
+        return (await self.session.execute(stmt)).scalar_one_or_none()
 
     async def list_messages(self, conversation_id: UUID) -> list[Message]:
         """按时间正序返回所有消息（包括引用）。前端展示历史用。"""
@@ -43,9 +54,12 @@ class ConversationRepository:
         self,
         page: int,
         page_size: int,
+        *,
+        user_id: UUID | None = None,
     ) -> tuple[list[tuple[Conversation, int]], int]:
         """按 updated_at 倒序分页，返回 (会话, 消息数) 列表 + 总数。
 
+        user_id 非 None 时只返回该用户的会话；admin 视角不传即可拿到所有。
         消息数用一次 LEFT JOIN + GROUP BY 拿，避免 N+1 查询。
         """
         page = max(page, 1)
@@ -62,6 +76,9 @@ class ConversationRepository:
             .offset(offset)
         )
         count_stmt = select(func.count(Conversation.id))
+        if user_id is not None:
+            stmt = stmt.where(Conversation.user_id == user_id)
+            count_stmt = count_stmt.where(Conversation.user_id == user_id)
 
         rows = (await self.session.execute(stmt)).all()
         items = [(row[0], int(row[1])) for row in rows]
@@ -71,12 +88,15 @@ class ConversationRepository:
     async def delete(
         self,
         conversation_id: UUID,
+        *,
+        user_id: UUID | None = None,
     ) -> bool:
         """硬删会话；messages / answer_citations 由 ON DELETE CASCADE 自动清理。
 
         返回是否真正删了一行，不存在时返回 False，便于路由 404 兜底。
         """
-        conversation = await self.get(conversation_id)
+        # 先 get 一次再 delete：rowcount 在 asyncpg 下没有类型签名，先确认存在再删更直观
+        conversation = await self.get(conversation_id, user_id=user_id)
         if conversation is None:
             return False
         await self.session.delete(conversation)
