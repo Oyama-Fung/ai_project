@@ -5,6 +5,25 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 DocumentStatusValue = Literal["uploading", "parsing", "indexing", "ready", "failed"]
+IngestionTaskTypeValue = Literal["ingest", "reindex"]
+IngestionTaskStatusValue = Literal["pending", "running", "success", "failed"]
+
+
+class IngestionTaskRead(BaseModel):
+    """单条入库任务快照（详情页"最近一次任务"卡片用）。"""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    task_type: IngestionTaskTypeValue
+    status: IngestionTaskStatusValue
+    retry_count: int
+    error_message: str | None = None
+    progress_total: int
+    progress_done: int
+    started_at: datetime | None = None
+    finished_at: datetime | None = None
+    created_at: datetime
 
 
 class DocumentRead(BaseModel):
@@ -18,6 +37,10 @@ class DocumentRead(BaseModel):
     size: int
     status: DocumentStatusValue
     error_message: str | None = None
+    # 每次 reindex 成功 +1，列表与详情都展示
+    version: int = 1
+    # 最近一次入库任务进度，前端轮询时展示状态卡片
+    latest_task: IngestionTaskRead | None = None
     # 空数组视为"公开"；非空数组与用户有效权限标签做重叠匹配
     permission_tags: list[str] = Field(default_factory=list)
     # 上传者 user_id；用户被硬删后置 None

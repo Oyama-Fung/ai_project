@@ -148,8 +148,13 @@ class MessageRead(BaseModel):
     agent_steps: list[AgentStep] | None = None
     # 第 8 章 answer_verifier 校验结果；user / 旧消息 / 拒答路径为 None
     verify_result: VerifyResultRead | None = None
+    # LangSmith trace_id；user / 旧消息 / 未启用观测时为 None
     trace_id: str | None = None
+    # LangSmith UI 跳转链接，按 LANGSMITH_RUN_URL_PREFIX 拼接；未配置 prefix 时为 None
+    # 后端拼好下发，避免把 workspace / org 信息暴露到前端配置
     trace_url: str | None = None
+    # 语义缓存：True 表示本条 assistant 消息来自缓存命中（跳过了图和 LLM）
+    cache_hit: bool = False
 
     @classmethod
     def from_orm(cls, message) -> "MessageRead":
@@ -166,6 +171,7 @@ class MessageRead(BaseModel):
             verify_result=_parse_verify_result(message.extra_metadata) if is_assistant else None,
             trace_id=trace_id,
             trace_url=build_trace_url(trace_id),
+            cache_hit=_parse_cache_hit(message.extra_metadata) if is_assistant else False,
         )
 
 
@@ -224,6 +230,17 @@ def _parse_verify_result(metadata: dict | None) -> VerifyResultRead | None:
         return VerifyResultRead.model_validate(raw)
     except Exception:
         return None
+
+
+def _parse_cache_hit(metadata: dict | None) -> bool:
+    """从 messages.extra_metadata 中提取 cache_hit 标记。
+
+    历史消息没有该字段，按 False 处理。
+    """
+    if not metadata:
+        return False
+    raw = metadata.get("cache_hit")
+    return bool(raw)
 
 
 class ConversationDetail(BaseModel):

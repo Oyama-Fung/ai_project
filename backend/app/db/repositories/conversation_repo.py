@@ -1,3 +1,9 @@
+"""会话与消息访问层。
+
+约定同其它 repo：不负责 commit，事务边界由 service 控制。
+list_page / get / delete 都支持按 user_id 过滤。
+"""
+
 from collections.abc import Sequence
 from uuid import UUID
 
@@ -14,13 +20,13 @@ class ConversationRepository:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
-    async def count_messages(self, conversation_id: UUID) -> int:
-        stmt = select(func.count(Message.id)).where(Message.conversation_id == conversation_id)
-        return int((await self.session.execute(stmt)).scalar_one())
-
-    async def create(self, title: str = DEFAULT_CONVERSATION_TITLE) -> Conversation:
-        """创建新对话"""
-        conversation = Conversation(title=title)
+    async def create(
+        self,
+        title: str = DEFAULT_CONVERSATION_TITLE,
+        *,
+        user_id: UUID | None = None,
+    ) -> Conversation:
+        conversation = Conversation(title=title, user_id=user_id)
         self.session.add(conversation)
         await self.session.flush()
         return conversation
@@ -41,7 +47,7 @@ class ConversationRepository:
         return (await self.session.execute(stmt)).scalar_one_or_none()
 
     async def list_messages(self, conversation_id: UUID) -> list[Message]:
-        """按时间正序返回所有消息（包括引用）。前端展示历史用。"""
+        """按时间正序返回所有消息（含引用）。前端展示历史用。"""
         stmt = (
             select(Message)
             .where(Message.conversation_id == conversation_id)
@@ -49,6 +55,27 @@ class ConversationRepository:
             .options(selectinload(Message.citations))
         )
         return list((await self.session.execute(stmt)).scalars().all())
+
+    async def recent_messages(self, conversation_id: UUID, limit: int) -> list[Message]:
+        """取最近 N 条消息，按时间正序返回。
+
+        N 是消息条数；2N 大致对应 N 轮 user-assistant 对话。
+        """
+        if limit <= 0:
+            return []
+        # 先按倒序取 N 条，再在 Python 侧反转为正序
+        stmt = (
+            select(Message)
+            .where(Message.conversation_id == conversation_id)
+            .order_by(Message.created_at.desc(), Message.id.desc())
+            .limit(limit)
+        )
+        rows = list((await self.session.execute(stmt)).scalars().all())
+        return list(reversed(rows))
+
+    async def count_messages(self, conversation_id: UUID) -> int:
+        stmt = select(func.count(Message.id)).where(Message.conversation_id == conversation_id)
+        return int((await self.session.execute(stmt)).scalar_one())
 
     async def list_page(
         self,
@@ -117,21 +144,7 @@ class ConversationRepository:
         conversation.title = new_title[:30]
         await self.session.flush()
 
-    async def recent_messages(self, conversation_id: UUID, limit: int) -> list[Message]:
-        """取最近的 N 条消息，按时间正序返回。"""
-        if limit <= 0:
-            return []
-        # 先倒序取 limit 条，再正序返回
-        stmt = (
-            select(Message)
-            .where(Message.conversation_id == conversation_id)
-            .order_by(Message.created_at.desc(), Message.id.desc())
-            .limit(limit)
-        )
-        rows = list((await self.session.execute(stmt)).scalars().all())
-        return list(reversed(rows))
-
-    async def add_message(self, messages: Sequence[Message]) -> None:
+    async def add_messages(self, messages: Sequence[Message]) -> None:
         """批量添加消息"""
         if not messages:
             return
