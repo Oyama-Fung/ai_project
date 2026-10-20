@@ -10,6 +10,7 @@ from app.core.config import settings
 from app.core.logging import configure_logging, get_logger
 from app.core.observability import configure_observability
 from app.db.seed import seed_default_admin
+from app.mcp_server import knowledge_mcp
 
 
 @asynccontextmanager
@@ -28,9 +29,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         await seed_default_admin()
     except Exception:
         logger.exception("种子初始化失败；后续可重新启动重试")
-    yield
-    # async with knowledge_mcp.session_manager.run():
-    #     yield
+
+    async with knowledge_mcp.session_manager.run():
+        yield
 
 
 def create_app() -> FastAPI:
@@ -61,6 +62,10 @@ def create_app() -> FastAPI:
 
     # 注册错误处理器
     register_error_handlers(app)
+
+    # MCP Server 同进程挂载到 /mcp：外部 Agent 用 Streamable HTTP transport 调用，
+    # 鉴权复用 Authorization: Bearer JWT
+    app.mount("/mcp", knowledge_mcp.streamable_http_app(), name="mcp")
 
     logger.info("Application started successfully: %s", settings.app_name)
 

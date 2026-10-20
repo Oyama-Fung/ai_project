@@ -23,7 +23,7 @@ dependencies = [
     "langchain-text-splitters>=1.1.2",
     "langgraph>=1.2.11",
     "langsmith>=0.8.3",
-    "mcp>=2.3.0",
+    "mcp>=1.14.0,<2",
     "pgvector>=0.5.0",
     "pydantic-settings>=2.15.0",
     "pyjwt>=2.15.1",
@@ -76,4 +76,3 @@ ignore = ["F401","RUF001","RUF002","RUF003","B008"]
 indent-style = "space"
 quote-style = "double"
 skip-magic-trailing-comma = false
-

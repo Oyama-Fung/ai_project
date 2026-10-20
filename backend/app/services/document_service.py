@@ -1,5 +1,7 @@
 import hashlib
 from collections.abc import Sequence
+from dataclasses import dataclass
+from datetime import datetime
 from pathlib import PurePath
 from uuid import UUID
 
@@ -15,6 +17,8 @@ from app.db.repositories.document_repo import DocumentRepository
 from app.db.repositories.ingestion_task_repo import IngestionTaskRepository
 from app.ingestion.tasks import ingest_document_task, reindex_document_task
 from app.storage.file_service import FileService, get_file_service
+
+logger = get_logger(__name__)
 
 # 受支持的 MIME 类型
 _ACCEPTED_MIME_TYPES: dict[str, str] = {
@@ -54,7 +58,18 @@ def _resolve_mime_and_suffix(file: UploadFile) -> tuple[str, str]:
 # 删除允许的状态
 _DELETABLE_STATUSES = frozenset({DocumentStatus.READY, DocumentStatus.FAILED, DocumentStatus.UPLOADING})
 
-logger = get_logger(__name__)
+
+@dataclass(frozen=True)
+class KnowledgeBaseStats:
+    """知识库整体规模快照，按调用者权限范围统计。
+
+    chunk_count 仅计入 status='ready' 的文档，与检索可见性一致；
+    last_indexed_at 取最近一次 ready 文档的 updated_at（含 reindex 后的刷新）。
+    """
+
+    document_count: int
+    chunk_count: int
+    last_indexed_at: datetime | None
 
 
 def _normalize_tags(tags: Sequence[str] | None) -> list[str]:
@@ -307,3 +322,22 @@ class DocumentService:
 
     async def get_latest_task(self, document_id: UUID) -> IngestionTask | None:
         return await self.task_repo.get_latest_by_document(document_id)
+
+    async def get_stats(
+        self,
+        *,
+        permission_tags: list[str] | None = None,
+    ) -> KnowledgeBaseStats:
+        """聚合 documents / chunks 总数与最新入库时间。
+
+        permission_tags：admin 视角传 None 不限；普通用户传合并后的有效标签，
+        三处统计 SQL 共用 `_permission_where` 保证可见性一致。
+        """
+        document_count = await self.repo.count(permission_tags=permission_tags)
+        chunk_count = await self.chunk_repo.count_visible(permission_tags=permission_tags)
+        last_indexed_at = await self.repo.get_last_indexed_at(permission_tags=permission_tags)
+        return KnowledgeBaseStats(
+            document_count=document_count,
+            chunk_count=chunk_count,
+            last_indexed_at=last_indexed_at,
+        )
