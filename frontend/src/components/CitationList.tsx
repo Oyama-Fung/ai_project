@@ -79,13 +79,13 @@ export const CitationList = forwardRef<CitationListHandle, CitationListProps>(
                             <span>{c.document_name}</span>
                         )}
                         {c.page_no != null ? (
-                            <span style={{ marginInlineStart: 8, color: '#999' }}>第 {c.page_no} 页</span>
+                            <span style={{ marginInlineStart: 8, color: 'var(--app-text-tertiary)' }}>第 {c.page_no} 页</span>
                         ) : null}
                     </span>
                 ),
                 children: (
                     <Paragraph
-                        style={{ whiteSpace: 'pre-wrap', marginBottom: 0, color: '#555' }}
+                        style={{ whiteSpace: 'pre-wrap', marginBottom: 0, color: 'var(--app-text-secondary)' }}
                         ellipsis={{ rows: 6, expandable: true, symbol: '展开' }}
                     >
                         {c.quote}
@@ -101,7 +101,7 @@ export const CitationList = forwardRef<CitationListHandle, CitationListProps>(
                 items={items}
                 activeKey={activeKey}
                 onChange={(keys) => setActiveKey(typeof keys === 'string' ? [keys] : keys)}
-                style={{ marginTop: 12, background: '#fafafa', borderRadius: 6 }}
+                style={{ marginTop: 12, background: 'var(--app-surface-alt)', borderRadius: 6 }}
             />
         )
     },

@@ -41,3 +41,40 @@ export function isPdfMime(mimeType: string): boolean {
 export function isHtmlMime(mimeType: string): boolean {
   return mimeType === 'text/html' || mimeType === 'application/xhtml+xml'
 }
+
+// 优化文件名（自修改）
+const TYPE_LABELS: Record<string, string> = {
+  'application/pdf': 'PDF',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'DOCX',
+  'application/msword': 'DOC',
+  'text/markdown': 'MD',
+  'text/x-markdown': 'MD',
+  'text/plain': 'TXT',
+  'text/html': 'HTML',
+  'application/xhtml+xml': 'HTML',
+}
+
+const TYPE_COLORS: Record<string, string> = {
+  PDF: 'red',
+  DOCX: 'blue',
+  DOC: 'blue',
+  MD: 'geekblue',
+  TXT: 'default',
+  HTML: 'orange',
+}
+
+/** 把冗长的 mime 串压成 PDF / DOCX / MD 这类短标签，列表里更易扫读。 */
+export function getDocumentTypeLabel(mimeType: string): string {
+  const mapped = TYPE_LABELS[mimeType]
+  if (mapped) return mapped
+  const sub = mimeType.split('/').pop() ?? ''
+  const cleaned = sub
+    .replace(/^vnd\.openxmlformats-officedocument\./, '')
+    .replace(/^vnd\.ms-/, '')
+    .replace(/^x-/, '')
+  return (cleaned || 'FILE').slice(0, 8).toUpperCase()
+}
+
+export function getDocumentTypeColor(mimeType: string): string {
+  return TYPE_COLORS[getDocumentTypeLabel(mimeType)] ?? 'default'
+}

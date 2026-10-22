@@ -10,7 +10,8 @@ export const gfmComponents = {
                     borderCollapse: 'collapse',
                     width: '100%',
                     fontSize: 13,
-                    background: '#fff',
+                    background: 'var(--app-surface)',
+                    color: 'var(--app-text)',
                 }}
             />
         </div>
@@ -19,8 +20,8 @@ export const gfmComponents = {
         <th
             {...props}
             style={{
-                border: '1px solid #d9d9d9',
-                background: '#fafafa',
+                border: '1px solid var(--app-border-strong)',
+                background: 'var(--app-surface-alt)',
                 padding: '6px 10px',
                 textAlign: 'left',
                 fontWeight: 600,
@@ -30,14 +31,14 @@ export const gfmComponents = {
     td: (props: React.ComponentProps<'td'>) => (
         <td
             {...props}
-            style={{ border: '1px solid #d9d9d9', padding: '6px 10px', verticalAlign: 'top' }}
+            style={{ border: '1px solid var(--app-border-strong)', padding: '6px 10px', verticalAlign: 'top' }}
         />
     ),
     code: (props: React.ComponentProps<'code'>) => (
         <code
             {...props}
             style={{
-                background: 'rgba(0,0,0,0.06)',
+                background: 'var(--app-code-bg)',
                 padding: '1px 4px',
                 borderRadius: 3,
                 fontSize: '0.9em',

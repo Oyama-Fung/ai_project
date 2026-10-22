@@ -1,8 +1,9 @@
-import { Layout, Menu } from "antd";
+import { Layout, Menu, Space } from "antd";
 import { DashboardOutlined, ExperimentOutlined, FileTextOutlined, MessageOutlined, TeamOutlined, SafetyOutlined, } from "@ant-design/icons";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import type { MenuProps } from 'antd'
 import { UserMenu } from '@/components/UserMenu'
+import { ThemeToggle } from '@/components/ThemeToggle'
 import { useAuthStore } from '@/stores/authStore'
 
 const { Header, Sider, Content } = Layout
@@ -70,7 +71,7 @@ export function BasicLayout() {
                     padding: "16px 0",
                     fontSize: 16
                 }}>
-                    RAG 知识库
+                    OYAMA RAG SYSTEM
                 </div>
                 <Menu
                     theme="dark"
@@ -79,22 +80,25 @@ export function BasicLayout() {
                     items={menuItems}
                 />
             </Sider>
-            <Layout>
+            <Layout style={{ minWidth: 0 }}>
                 <Header
                     style={{
-                        background: '#fff',
                         paddingLeft: 24,
                         paddingRight: 24,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
+                        color: 'var(--app-text)',
                         fontSize: 16,
                     }}
                 >
-                    <span>企业级 RAG 知识库</span>
-                    <UserMenu />
+                    <span>RAG AGENT</span>
+                    <Space size={16}>
+                        <ThemeToggle />
+                        <UserMenu />
+                    </Space>
                 </Header>
-                <Content style={{ margin: 24 }}>
+                <Content style={{ margin: 24, minWidth: 0 }}>
                     <Outlet />
                 </Content>
             </Layout>

@@ -1,0 +1,68 @@
+/*
+ * 全局主题变量。
+ *
+ * 亮色值写在 :root 作为兜底，暗黑值由 <html data-theme="dark"> 覆盖。
+ * 组件里凡是手写的颜色一律走 var(--app-*)，这样切换主题只需改一个属性，
+ * 不必让每个组件都订阅 store 重渲染。
+ */
+
+:root {
+  /* 层级底色：页面 < 容器 < 次级容器 */
+  --app-bg: #f5f7fa;
+  --app-surface: #ffffff;
+  --app-surface-alt: #fafafa;
+
+  /* 描边 */
+  --app-border: #f0f0f0;
+  --app-border-strong: #d9d9d9;
+
+  /* 文字：主 / 次 / 弱 */
+  --app-text: #1f2329;
+  --app-text-secondary: #595959;
+  --app-text-tertiary: #8c8c8c;
+
+  /* 品牌色与选中态 */
+  --app-primary: #1677ff;
+  --app-primary-bg: #e6f4ff;
+
+  /* 行内代码底色 */
+  --app-code-bg: rgba(0, 0, 0, 0.06);
+
+  /* 登录页背景渐变 */
+  --app-login-bg: linear-gradient(135deg, #f5f7fb 0%, #e6efff 100%);
+}
+
+[data-theme='dark'] {
+  --app-bg: #0e1116;
+  --app-surface: #181c24;
+  --app-surface-alt: #1f242e;
+
+  --app-border: #2a303b;
+  --app-border-strong: #3a4250;
+
+  --app-text: #dfe3ea;
+  --app-text-secondary: #a3adbb;
+  --app-text-tertiary: #7d8794;
+
+  /* 与 antd darkAlgorithm 解析出的主色保持一致（种子 #4c8dff 在深色下的实际取值） */
+  --app-primary: #447bdc;
+  --app-primary-bg: rgba(76, 141, 255, 0.16);
+
+  --app-code-bg: rgba(255, 255, 255, 0.1);
+
+  --app-login-bg: linear-gradient(135deg, #0e1116 0%, #16202f 100%);
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--app-bg);
+  color: var(--app-text);
+}
+
+/* 切换瞬间给个短过渡，避免整页生硬闪切 */
+body {
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}

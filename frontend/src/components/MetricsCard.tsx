@@ -39,7 +39,7 @@ export function MetricsCard({ label, value, passthrough = false, hint, suffix }:
             {label}
             {hint && (
               <Tooltip title={hint}>
-                <QuestionCircleOutlined style={{ marginLeft: 6, color: '#8c8c8c' }} />
+                <QuestionCircleOutlined style={{ marginLeft: 6, color: 'var(--app-text-tertiary)' }} />
               </Tooltip>
             )}
           </span>

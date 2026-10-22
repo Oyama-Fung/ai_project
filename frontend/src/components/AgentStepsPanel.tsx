@@ -31,7 +31,7 @@ export function AgentStepsPanel({ steps }: AgentStepsPanelProps) {
     <Collapse
       size="small"
       ghost
-      style={{ marginTop: 12, background: '#fafafa', borderRadius: 6 }}
+      style={{ marginTop: 12, background: 'var(--app-surface-alt)', borderRadius: 6 }}
       items={[
         {
           key: 'agent',
@@ -100,7 +100,7 @@ function StepRow({ step }: { step: AgentStep }) {
 const paragraphStyle: React.CSSProperties = {
   whiteSpace: 'pre-wrap',
   marginBottom: 4,
-  color: '#555',
+  color: 'var(--app-text-secondary)',
   fontSize: 13,
 }
 

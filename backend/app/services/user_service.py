@@ -56,7 +56,8 @@ class UserService:
             user.roles = roles
         await self.user_repo.add(user)
         await self.session.commit()
-        await self.session.refresh(user, attribute_names=["roles"])
+        # await self.session.refresh(user, attribute_names=["roles"])
+        await self.session.refresh(user)
         return user
 
     async def update_user(
@@ -80,7 +81,8 @@ class UserService:
                 raise ValidationError("密码长度至少 4 位")
             user.password_hash = hash_password(password)
         await self.session.commit()
-        await self.session.refresh(user, attribute_names=["roles"])
+        # await self.session.refresh(user, attribute_names=["roles"])
+        await self.session.refresh(user)
         return user
 
     async def set_roles(self, user_id: UUID, role_ids: Sequence[UUID]) -> User:
@@ -88,7 +90,8 @@ class UserService:
         roles = await self.role_repo.get_many(list(role_ids))
         await self.user_repo.set_roles(user, roles)
         await self.session.commit()
-        await self.session.refresh(user, attribute_names=["roles"])
+        # await self.session.refresh(user, attribute_names=["roles"])
+        await self.session.refresh(user)
         return user
 
     async def delete_user(self, user_id: UUID) -> None:

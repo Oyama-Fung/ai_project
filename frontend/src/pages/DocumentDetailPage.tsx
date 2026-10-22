@@ -465,7 +465,7 @@ function PreviewArea({ mimeType, previewUrl }: { mimeType: string; previewUrl: s
             <iframe
                 title="document-preview"
                 src={previewUrl}
-                style={{ width: '100%', height: 600, border: '1px solid #f0f0f0' }}
+                style={{ width: '100%', height: 600, border: '1px solid var(--app-border)' }}
             />
         )
     }
@@ -564,7 +564,7 @@ function ChunksSection({
                             }
                             description={
                                 <Paragraph
-                                    style={{ marginBottom: 0, color: 'rgba(0,0,0,.65)' }}
+                                    style={{ marginBottom: 0, color: 'var(--app-text)' }}
                                     ellipsis={{ rows: 2 }}
                                 >
                                     {chunk.content_excerpt}
@@ -661,7 +661,7 @@ function ChunkDetailBody({ chunk }: { chunk: DocumentChunkDetail }) {
                     maxHeight: 480,
                     overflow: 'auto',
                     padding: 12,
-                    background: '#fafafa',
+                    background: 'var(--app-surface-alt)',
                     borderRadius: 4,
                 }}
             >

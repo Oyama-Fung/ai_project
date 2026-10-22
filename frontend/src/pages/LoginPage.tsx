@@ -44,8 +44,7 @@ export function LoginPage() {
         minHeight: '100vh',
         display: 'grid',
         placeItems: 'center',
-        background:
-          'linear-gradient(135deg, #f5f7fb 0%, #e6efff 100%)',
+        background: 'var(--app-login-bg)',
         padding: 24,
       }}
     >
@@ -83,7 +82,6 @@ export function LoginPage() {
           type="secondary"
           style={{ marginTop: 8, marginBottom: 0, fontSize: 12, textAlign: 'center' }}
         >
-          首次部署默认账号 admin / admin，登录后请尽快修改
         </Typography.Paragraph>
       </Card>
     </div>

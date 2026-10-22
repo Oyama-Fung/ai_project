@@ -28,7 +28,7 @@ export function QueryRoutePanel({ queryRoute }: QueryRoutePanelProps) {
     <Collapse
       size="small"
       ghost
-      style={{ marginTop: 12, background: '#fafafa', borderRadius: 6 }}
+      style={{ marginTop: 12, background: 'var(--app-surface-alt)', borderRadius: 6 }}
       items={[
         {
           key: 'route',
@@ -64,7 +64,7 @@ function RouteDetail({ queryRoute }: { queryRoute: QueryRouteRead }) {
     case 'multi_query':
       return (
         <DetailRow label="子查询列表">
-          <ol style={{ paddingInlineStart: 20, margin: 0, color: '#555' }}>
+          <ol style={{ paddingInlineStart: 20, margin: 0, color: 'var(--app-text-secondary)' }}>
             {(queryRoute.multi_queries ?? []).map((q, i) => (
               <li key={i} style={{ marginBottom: 4 }}>
                 {q}
@@ -81,7 +81,7 @@ function RouteDetail({ queryRoute }: { queryRoute: QueryRouteRead }) {
 function DetailRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <Text strong style={{ fontSize: 12, color: '#888' }}>
+      <Text strong style={{ fontSize: 12, color: 'var(--app-text-tertiary)' }}>
         {label}
       </Text>
       <div style={{ marginTop: 4 }}>{children}</div>
@@ -92,5 +92,5 @@ function DetailRow({ label, children }: { label: string; children: React.ReactNo
 const paragraphStyle: React.CSSProperties = {
   whiteSpace: 'pre-wrap',
   marginBottom: 0,
-  color: '#555',
+  color: 'var(--app-text-secondary)',
 }

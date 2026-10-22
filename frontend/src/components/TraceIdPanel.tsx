@@ -21,7 +21,7 @@ export function TraceIdPanel({ traceId, traceUrl }: TraceIdPanelProps) {
       style={{
         marginTop: 12,
         padding: '6px 10px',
-        background: '#fafafa',
+        background: 'var(--app-surface-alt)',
         borderRadius: 6,
         fontSize: 12,
       }}

@@ -1,18 +1,18 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-// import './index.css'
-// import App from './App.tsx'
-import zhCN from 'antd/locale/zh_CN'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { App as Antdapp, ConfigProvider } from 'antd'
 import { RouterProvider } from 'react-router-dom'
 import { router } from '@/routes'
 import 'antd/dist/reset.css'
+import '@/theme/theme.css'
 import '@/api/client'
 import { useAuthStore } from '@/stores/authStore'
+import { useThemeStore } from '@/stores/themeStore'
+import { ThemeProvider } from '@/theme/ThemeProvider'
 
-// 应用挂载前先从 localStorage 恢复登录态
+// 应用挂载前先恢复登录态与主题模式，避免闪一下默认样式
 useAuthStore.getState().hydrate()
+useThemeStore.getState().hydrate()
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -29,12 +29,10 @@ if (!root) throw new Error('root element not found')
 
 createRoot(root).render(
   <StrictMode>
-    <ConfigProvider locale={zhCN} theme={{ token: { colorPrimary: '#1677ff' } }}>
-      <Antdapp>
-        <QueryClientProvider client={queryClient}>
-          <RouterProvider router={router} />
-        </QueryClientProvider>
-      </Antdapp>
-    </ConfigProvider>
+    <ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>
+    </ThemeProvider>
   </StrictMode>,
 )

@@ -62,7 +62,7 @@ export function ConversationSidebar({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <div style={{ padding: 12, borderBottom: '1px solid #f0f0f0' }}>
+      <div style={{ padding: 12, borderBottom: '1px solid var(--app-border)' }}>
         <Button
           type="primary"
           icon={<PlusOutlined />}
@@ -127,7 +127,7 @@ function ConversationItem({
     <List.Item
       style={{
         cursor: 'pointer',
-        background: isActive ? '#e6f4ff' : 'transparent',
+        background: isActive ? 'var(--app-primary-bg)' : 'transparent',
         padding: '8px 12px',
         borderRadius: 4,
         margin: '2px 8px',
@@ -162,14 +162,14 @@ function ConversationItem({
       ]}
     >
       <List.Item.Meta
-        avatar={<MessageOutlined style={{ color: isActive ? '#1677ff' : '#999' }} />}
+        avatar={<MessageOutlined style={{ color: isActive ? 'var(--app-primary)' : 'var(--app-text-tertiary)' }} />}
         title={
           <Text
             ellipsis={{ tooltip: item.title }}
             style={{
               fontSize: 13,
               fontWeight: isActive ? 600 : 400,
-              color: isActive ? '#1677ff' : undefined,
+              color: isActive ? 'var(--app-primary)' : undefined,
             }}
           >
             {item.title}

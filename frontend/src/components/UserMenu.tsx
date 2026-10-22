@@ -9,6 +9,7 @@ import { App as AntdApp, Avatar, Dropdown, Space, Tag, Typography } from 'antd'
 import { LogoutOutlined, UserOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
+import userAvatar from '@/assets/avatar.jpg'
 
 export function UserMenu() {
   const { message } = AntdApp.useApp()
@@ -41,7 +42,12 @@ export function UserMenu() {
       placement="bottomRight"
     >
       <Space style={{ cursor: 'pointer' }}>
-        <Avatar size="small" icon={<UserOutlined />} />
+        <Avatar
+          size="small"
+          src={userAvatar}
+          alt={user.displayName}
+          icon={<UserOutlined />}
+        />
         <Typography.Text>{user.displayName}</Typography.Text>
         {user.isAdmin ? (
           <Tag color="gold">管理员</Tag>

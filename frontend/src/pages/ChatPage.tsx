@@ -5,14 +5,13 @@ import {
     Button,
     Empty,
     Input,
-    Space,
     Spin,
     Typography,
     message as antdMessage,
     Layout,
     Tag
 } from 'antd'
-import { PlusOutlined, RobotOutlined, SendOutlined, UserOutlined } from '@ant-design/icons'
+import { RobotOutlined, SendOutlined, UserOutlined } from '@ant-design/icons'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -34,8 +33,9 @@ import { conversationsQueryKey } from '@/api/queryKeys'
 import { ConversationSidebar } from '@/components/ConversationSidebar'
 import { TraceIdPanel } from '@/components/TraceIdPanel'
 import { useAuthStore } from '@/stores/authStore'
+import userAvatar from '@/assets/avatar.jpg'
 
-const { Text, Paragraph, Title } = Typography
+const { Text } = Typography
 const { TextArea } = Input
 const { Sider, Content } = Layout
 const REFUSAL_ANSWER = '抱歉，知识库中没有找到与该问题相关的可靠依据。'
@@ -304,16 +304,16 @@ export function ChatPage() {
         <Layout
             style={{
                 height: 'calc(100vh - 112px)',
-                background: '#fff',
+                background: 'var(--app-surface)',
                 borderRadius: 8,
                 overflow: 'hidden',
-                border: '1px solid #f0f0f0',
+                border: '1px solid var(--app-border)',
             }}
         >
             <Sider
                 width={260}
                 theme="light"
-                style={{ borderRight: '1px solid #f0f0f0', background: '#fafafa' }}
+                style={{ borderRight: '1px solid var(--app-border)', background: 'var(--app-surface-alt)' }}
             >
                 <ConversationSidebar
                     currentId={conversationId}
@@ -344,10 +344,10 @@ export function ChatPage() {
                 <div
                     style={{
                         padding: 12,
-                        borderTop: '1px solid #f0f0f0',
+                        borderTop: '1px solid var(--app-border)',
                         display: 'flex',
                         gap: 8,
-                        background: '#fafafa',
+                        background: 'var(--app-surface-alt)',
                     }}
                 >
                     <TextArea
@@ -441,13 +441,14 @@ function MessageBubble({ message }: MessageBubbleProps) {
             }}
         >
             <Avatar
+                src={isUser ? userAvatar : undefined}
                 icon={isUser ? <UserOutlined /> : <RobotOutlined />}
-                style={{ background: isUser ? '#1677ff' : '#52c41a', flexShrink: 0 }}
+                style={{ background: isUser ? 'var(--app-primary)' : '#52c41a', flexShrink: 0 }}
             />
             <div
                 style={{
                     maxWidth: '78%',
-                    background: isUser ? '#e6f4ff' : '#f6f6f6',
+                    background: isUser ? 'var(--app-primary-bg)' : 'var(--app-surface-alt)',
                     padding: '12px 16px',
                     borderRadius: 8,
                 }}
